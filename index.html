@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      canvas {
+        border: 1px solid #000;
+        cursor: grab;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="galleryCanvas" width="600" height="400"></canvas>
+
+    <script>
+      const canvas = document.getElementById("galleryCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const images = ["0.jpg", "1.jpg", "2.jpg", "3.jpg"];
+      const imageContainerWidth = 600;
+      const imageContainerHeight = 400;
+      const imageCount = images.length;
+
+      let startX; // Where the user started dragging
+      let currentIndex = 0; // Which image is currently in the center
+      let scrollLeft = 0; // Position of the left edge of the entire gallery
+      let isDragging = false;
+      let dragOffset = 0; // How much the user has dragged
+
+      const loadedImages = [];
+      let loadedCount = 0;
+
+      function preloadImages() {
+        for (let i = 0; i < images.length; i++) {
+          const img = new Image();
+          img.src = images[i];
+          img.onload = () => {
+            loadedCount++;
+            if (loadedCount === images.length) {
+              drawGallery();
+            }
+          };
+          loadedImages.push(img);
+        }
+      }
+
+      function drawGallery() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#ccc";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw the next and previous images
+        for (let i = 0; i < imageCount; i++) {
+          const imageIndex = i % imageCount;
+          const image = loadedImages[imageIndex];
+
+          //Trying to fit image into container
+          const imageAspectRatio = image.width / image.height;
+          let imageHeight = imageContainerWidth / imageAspectRatio;
+
+          //If image too tall, scale it down
+          if (imageHeight > imageContainerHeight) {
+            imageHeight = imageContainerHeight;
+          }
+
+          const imageWidth = imageHeight * imageAspectRatio;
+
+          //Funny parallax effect
+          //const offsetX = (i * (imageContainerWidth + scrollLeft)) / 2;
+
+          let offsetX = i * imageContainerWidth + scrollLeft;
+
+          if (imageWidth < imageContainerWidth) {
+            offsetX += (imageContainerWidth - imageWidth) / 2;
+          }
+
+          //Vertical centering. Optional!
+          const offsetY = (imageContainerHeight - imageHeight) / 2;
+
+          ctx.drawImage(image, offsetX, offsetY, imageWidth, imageHeight);
+        }
+
+        if (isDragging) {
+          requestAnimationFrame(drawGallery);
+        }
+      }
+
+      canvas.addEventListener("mousedown", (e) => {
+        startX = e.pageX;
+        isDragging = true;
+        dragOffset = scrollLeft; // remember the current scrollLeft
+        canvas.style.cursor = "grabbing";
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX;
+        const mouseTravelDistance = x - startX;
+
+        currentIndex = Math.abs(Math.floor(scrollLeft / imageContainerWidth));
+
+        //Prevent scrolling past the first and last images
+        if (currentIndex === 0 && mouseTravelDistance > 0) {
+          scrollLeft = 0;
+        } else if (currentIndex === imageCount && mouseTravelDistance < 0) {
+          return;
+        } else {
+          scrollLeft = dragOffset + mouseTravelDistance;
+        }
+
+        requestAnimationFrame(drawGallery);
+      });
+
+      canvas.addEventListener("mouseup", () => {
+        startX = null;
+        isDragging = false;
+        canvas.style.cursor = "grab";
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        startX = null;
+        isDragging = false;
+        canvas.style.cursor = "grab";
+      });
+
+      preloadImages();
+    </script>
+  </body>
+</html>
